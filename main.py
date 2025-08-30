@@ -1,11 +1,12 @@
 import os
 from docx import Document
+from dotenv import load_dotenv
 
 # settings
-input_dir = 'input_dir'
-output_dir = 'output_dir'
-find_text = 'old phrase'
-replace_text = 'new phrase'
+input_dir = os.getenv("INPUT_DIR")
+output_dir = os.getenv("OUTPUT_DIR")
+find_text = os.getenv("FIND_TEXT")
+replace_text = os.getenv("REPLACE_TEXT")
 
 # check for output directory
 os.makedirs(output_dir, exist_ok=True)
