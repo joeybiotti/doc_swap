@@ -2,6 +2,9 @@ import os
 from docx import Document
 from dotenv import load_dotenv
 
+#l load .env variables
+load_dotenv()
+
 # settings
 input_dir = os.getenv("INPUT_DIR")
 output_dir = os.getenv("OUTPUT_DIR")
@@ -13,7 +16,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 def replace_in_docx(input_path, output_path, find, replace):
 	doc = Document(input_path)
-	for p in doc.paragraph:
+	for p in doc.paragraphs:
 		if find in p.text:
 			inline = p.runs 
 			for i in inline:
