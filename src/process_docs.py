@@ -1,7 +1,5 @@
 import os
-import pypandoc
 import shutil
-
 from docx import Document
 from dotenv import load_dotenv
 
@@ -9,81 +7,86 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Settings
-input_dir = os.getenv("INPUT_DIR")
-output_dir = os.getenv("OUTPUT_DIR")
-find_text = os.getenv("FIND_TEXT")
-replace_text = os.getenv("REPLACE_TEXT")
-log_file = os.path.join(output_dir, "log.txt")
+INPUT_DIR = os.getenv("INPUT_DIR")
+OUTPUT_DIR = os.getenv("OUTPUT_DIR")
+FIND_TEXT = os.getenv("FIND_TEXT")
+REPLACE_TEXT = os.getenv("REPLACE_TEXT")
+LOG_FILE = os.path.join(OUTPUT_DIR, "log.txt")
 
-os.makedirs(output_dir, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-def log(message):
-    with open(log_file, "a") as f:
+def log(message: str):
+    with open(LOG_FILE, "a") as f:
         f.write(message + "\n")
     print(message)
 
 
-def convert_doc_to_docx(doc_path, docx_path):
-    try:
-        pypandoc.convert_file(
-            doc_path, "docx", outputfile=docx_path, extra_args=["--standalone"])
-        log(f"[CONVERTED] {doc_path} -> {docx_path}")
-        return docx_path
-    except Exception as e:
-        log(f"[ERROR] Failed to convert {doc_path}: {e}")
-        return None
-
-
-def replace_text_in_docx(docx_path, output_path):
+def replace_text_in_docx(docx_path, output_path, find_text, replace_text):
     try:
         doc = Document(docx_path)
         replaced = False
+
+        # Replace in paragraphs
         for para in doc.paragraphs:
-            if find_text in para.text:
-                para.text = para.text.replace(find_text, replace_text)
-                replaced = True
+            for run in para.runs:
+                if find_text in run.text:
+                    run.text = run.text.replace(find_text, replace_text)
+                    replaced = True
+                    
+        # Replace in tables
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
-                    if find_text in cell.text:
-                        cell.text = cell.text.replace(find_text, replace_text)
-                        replaced = True
+                    for para in cell.paragraphs:
+                        for run in para.runs:
+                            if find_text in run.text:
+                                run.text = run.text.replace(find_text, replace_text)
+                                replaced = True
+                                
+        # Replace in headers and footers
+        for section in doc.sections:
+            header = section.header
+            footer = section.footer
+
+            for container in [header, footer]:
+                for para in container.paragraphs:  # fix typo: paragraphs not paragraph
+                    for run in para.runs:
+                        if find_text in run.text:
+                            run.text = run.text.replace(find_text, replace_text)
+                            replaced = True
+
+        # Always save the output file, even if nothing changed
         doc.save(output_path)
-        if replaced:
-            log(f"[MODIFIED] {docx_path} -> {output_path}")
-        else:
-            log(f"[COPIED] {docx_path} (no changes)")
-        return True
+        return replaced
+
     except Exception as e:
-        log(f"[ERROR] Failed to process {docx_path}: {e}")
+        print(f"[ERROR] Failed on {docx_path}: {e}")
         return False
 
-
-# Clear log file at start
-with open(log_file, "w") as f:
+# Clear log at start
+with open(LOG_FILE, "w") as f:
     f.write("=== Processing Log ===\n")
 
 # Main loop
-for filename in os.listdir(input_dir):
-    input_path = os.path.join(input_dir, filename)
+for filename in os.listdir(INPUT_DIR):
+    input_path = os.path.join(INPUT_DIR, filename)
+    output_path = os.path.join(OUTPUT_DIR, filename)
 
     try:
-        if filename.lower().endswith(".doc"):
-            # Convert to docx first
-            temp_docx = os.path.join(output_dir, filename + ".docx")
-            converted = convert_doc_to_docx(input_path, temp_docx)
-            if converted:
-                replace_text_in_docx(converted, temp_docx)
-
-        elif filename.lower().endswith(".docx"):
-            output_path = os.path.join(output_dir, filename)
-            replace_text_in_docx(input_path, output_path)
+        if filename.lower().endswith(".docx"):
+            replaced = replace_text_in_docx(
+                input_path, output_path, FIND_TEXT, REPLACE_TEXT)
+            if replaced:
+                log(f"[MODIFIED] {filename}")
+            else:
+                shutil.copy(input_path, output_path)
+                log(f"[COPIED] {filename} (no changes)")
 
         else:
-            # Copy non-doc files unchanged
-            shutil.copy(input_path, output_dir)
-            log(f"[SKIPPED] {filename} (not .doc/.docx)")
+            # Copy non-docx files unchanged
+            shutil.copy(input_path, output_path)
+            log(f"[SKIPPED] {filename} (not .docx)")
 
     except Exception as e:
         log(f"[ERROR] Unexpected error on {filename}: {e}")
