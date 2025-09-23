@@ -46,5 +46,5 @@ def test_empty_file(tmp_docx):
     infile = tmp_docx("")
     outfile = infile.parent / "out.docx"
 
-    replace_text_in_docx(infile, outfile,"Anything", "Replacement")
+    replace_text_in_docx(infile, outfile, "Anything", "Replacement")
     assert get_docx_text(outfile) == ""
