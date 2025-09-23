@@ -1,18 +1,21 @@
-# DocxTextReplacer
+# DocSwap
 
-A Python script to search for a specific phrase in `.docx` files, replace it with new text, and save the modified documents to a separate directory.
+A Python tool for batch search-and-replace in `.docx` files, with logging and robust handling of multiple phrases.
 
 ## Features
 
-* Recursively scans a folder for `.docx` files.
-* Replaces a given phrase with another phrase.
-* Saves updated files to a specified output directory without modifying the originals.
-* Easy to configure and run.
+- Recursively scans an input directory for `.docx` files.
+- Supports replacing multiple phrases at once (comma-separated via environment variable).
+- Processes paragraphs, tables, headers, and footers.
+- Copies non-`.docx` files unchanged to the output directory.
+- Logs all actions to `log.txt` in the output directory.
+- Never modifies original files.
 
 ## Requirements
 
-* Python 3.8+
-* [`python-docx`](https://python-docx.readthedocs.io/en/latest/) library
+- Python 3.8+
+- [`python-docx`](https://python-docx.readthedocs.io/en/latest/)
+- [`python-dotenv`](https://pypi.org/project/python-dotenv/)
 
 Install dependencies:
 
@@ -20,50 +23,41 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Or manually:
-
-```bash
-pip install python-docx
-```
-
 ## Usage
 
-1. Activate your virtual environment:
+1. Create a `.env` file in the project root with:
 
-```bash
-python -m venv venv
-source venv/bin/activate  # macOS/Linux
-venv\Scripts\activate     # Windows
-```
+   ```
+   INPUT_DIR=path/to/input
+   OUTPUT_DIR=path/to/output
+   FIND_TEXTS=phrase1,phrase2
+   REPLACE_TEXT=replacement
+   ```
 
-2. Edit `main.py` to specify:
+2. Run the script:
 
-   * The input directory containing `.docx` files
-   * The phrase to search for
-   * The replacement phrase
-   * The output directory
+   ```bash
+   python src/process_docs.py
+   ```
 
-3. Run the script:
-
-```bash
-python main.py
-```
-
-4. Check the output directory for modified files.
+3. Check the output directory for processed files and `log.txt` for a summary.
 
 ## Project Structure
 
 ```
-DocxTextReplacer/
+doc_swap/
 ├── main.py
-├── README.md
-├── .gitignore
+├── src/
+│   └── process_docs.py
+├── tests/
+│   └── test_process_docs.py
 ├── requirements.txt
-└── venv/  # optional, virtual environment
+├── README.md
+└── .env
 ```
 
 ## Notes
 
-* Original files are never modified.
-* Works only with `.docx` files, not legacy `.doc` files.
-* Suitable for batch processing many documents quickly.
+- Only `.docx` files are modified; others are copied as-is.
+- All changes and actions are logged.
+- See `tests/test_process_docs.py` for usage examples and test cases.
