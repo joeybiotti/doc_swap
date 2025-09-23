@@ -10,6 +10,7 @@ load_dotenv()
 INPUT_DIR = os.getenv("INPUT_DIR")
 OUTPUT_DIR = os.getenv("OUTPUT_DIR")
 FIND_TEXT = os.getenv("FIND_TEXT")
+FIND_TEXTS = os.getenv("FIND_TEXTS").split(",")
 REPLACE_TEXT = os.getenv("REPLACE_TEXT")
 LOG_FILE = os.path.join(OUTPUT_DIR, "log.txt")
 
@@ -22,47 +23,38 @@ def log(message: str):
     print(message)
 
 
-def replace_text_in_docx(docx_path, output_path, find_text, replace_text):
-    try:
-        doc = Document(docx_path)
-        replaced = False
+def replace_text_in_docx(docx_path, output_path, find_texts, replace_text):
+    doc = Document(docx_path)
+    replaced = False
 
-        # Replace in paragraphs
-        for para in doc.paragraphs:
-            for run in para.runs:
+    def replace_in_runs(runs):
+        nonlocal replaced
+        for run in runs:
+            for find_text in find_texts:
                 if find_text in run.text:
                     run.text = run.text.replace(find_text, replace_text)
                     replaced = True
-                    
-        # Replace in tables
-        for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    for para in cell.paragraphs:
-                        for run in para.runs:
-                            if find_text in run.text:
-                                run.text = run.text.replace(find_text, replace_text)
-                                replaced = True
-                                
-        # Replace in headers and footers
-        for section in doc.sections:
-            header = section.header
-            footer = section.footer
 
-            for container in [header, footer]:
-                for para in container.paragraphs:  # fix typo: paragraphs not paragraph
-                    for run in para.runs:
-                        if find_text in run.text:
-                            run.text = run.text.replace(find_text, replace_text)
-                            replaced = True
+    # Paragraphs
+    for para in doc.paragraphs:
+        replace_in_runs(para.runs)
 
-        # Always save the output file, even if nothing changed
-        doc.save(output_path)
-        return replaced
+    # Tables
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for para in cell.paragraphs:
+                    replace_in_runs(para.runs)
 
-    except Exception as e:
-        print(f"[ERROR] Failed on {docx_path}: {e}")
-        return False
+    # Headers and Footers
+    for section in doc.sections:
+        for container in [section.header, section.footer]:
+            for para in container.paragraphs:
+                replace_in_runs(para.runs)
+
+    doc.save(output_path)
+    return replaced
+
 
 # Clear log at start
 with open(LOG_FILE, "w") as f:
@@ -76,7 +68,7 @@ for filename in os.listdir(INPUT_DIR):
     try:
         if filename.lower().endswith(".docx"):
             replaced = replace_text_in_docx(
-                input_path, output_path, FIND_TEXT, REPLACE_TEXT)
+                input_path, output_path, FIND_TEXTS, REPLACE_TEXT)
             if replaced:
                 log(f"[MODIFIED] {filename}")
             else:
