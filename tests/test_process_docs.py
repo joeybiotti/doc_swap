@@ -37,7 +37,7 @@ def test_no_match(tmp_docx):
     infile = tmp_docx("Hello again")
     outfile = infile.parent / "out.docx"
 
-    replace_text_in_docx(infile, outfile, "Missing", "Replaced")
+    replace_text_in_docx(infile, outfile, ["Missing"], "Replaced")
     assert "Replaced" not in get_docx_text(outfile)
     assert get_docx_text(infile) == get_docx_text(outfile)
 

@@ -23,7 +23,7 @@ def log(message: str):
     print(message)
 
 
-def replace_text_in_docx(docx_path, output_path, find_texts, replace_text):
+def replace_text_in_docx(docx_path, output_path, find_texts, replace_text, dry_run=False):
     doc = Document(docx_path)
     replaced = False
 
@@ -52,35 +52,36 @@ def replace_text_in_docx(docx_path, output_path, find_texts, replace_text):
             for para in container.paragraphs:
                 replace_in_runs(para.runs)
 
-    doc.save(output_path)
-    return replaced
+    if dry_run and replaced:
+        print(f"[DRY RUN] Would modify: {docx_path}")
+    elif replaced:
+        doc.save(output_path)
+    else:
+        shutil.copy(docx_path, output_path)
 
 
-# Clear log at start
-with open(LOG_FILE, "w") as f:
-    f.write("=== Processing Log ===\n")
+def batch_process_docs(dry_run=False):
+    # Clear log at start
+    with open(LOG_FILE, "w") as f:
+        f.write("=== Processing Log ===\n")
 
-# Main loop
-for filename in os.listdir(INPUT_DIR):
-    input_path = os.path.join(INPUT_DIR, filename)
-    output_path = os.path.join(OUTPUT_DIR, filename)
+    for filename in os.listdir(INPUT_DIR):
+        input_path = os.path.join(INPUT_DIR, filename)
+        output_path = os.path.join(OUTPUT_DIR, filename)
 
-    try:
-        if filename.lower().endswith(".docx"):
-            replaced = replace_text_in_docx(
-                input_path, output_path, FIND_TEXTS, REPLACE_TEXT)
-            if replaced:
-                log(f"[MODIFIED] {filename}")
+        try:
+            if filename.lower().endswith(".docx"):
+                replaced = replace_text_in_docx(
+                    input_path, output_path, FIND_TEXTS, REPLACE_TEXT, dry_run=dry_run)
+                if replaced:
+                    log(f"[MODIFIED] {filename}")
+                else:
+                    shutil.copy(input_path, output_path)
+                    log(f"[COPIED] {filename} (no changes)")
             else:
                 shutil.copy(input_path, output_path)
-                log(f"[COPIED] {filename} (no changes)")
+                log(f"[SKIPPED] {filename} (not .docx)")
+        except Exception as e:
+            log(f"[ERROR] Unexpected error on {filename}: {e}")
 
-        else:
-            # Copy non-docx files unchanged
-            shutil.copy(input_path, output_path)
-            log(f"[SKIPPED] {filename} (not .docx)")
-
-    except Exception as e:
-        log(f"[ERROR] Unexpected error on {filename}: {e}")
-
-log("=== Done! ===")
+    log("=== Done! ===")
